@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock & Colours — Belfast Print Staff</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .admin-bar { background: var(--ink); color: var(--paper); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .admin-bar a { color: var(--paper); text-decoration: underline; font-size: 0.85rem; margin-left: 16px; }
+  .admin-wrap { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .lock-screen { max-width: 380px; margin: 90px auto; text-align: center; border: 3px solid var(--ink); padding: 40px 30px; }
+  .lock-screen input { width: 100%; padding: 12px 14px; border: 2px solid var(--ink); font-family: inherit; margin: 16px 0; font-size: 1rem; }
+  .lock-screen .error { color: var(--ink); font-weight: 700; font-size: 0.85rem; display: none; }
+
+  .admin-panel { border: 3px solid var(--ink); padding: 24px; margin-bottom: 32px; }
+  .admin-panel h2 { font-size: 1.15rem; margin-bottom: 6px; }
+  .admin-panel > p { font-size: 0.85rem; opacity: 0.7; margin: 0 0 20px; }
+
+  .size-stock-row { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--grey-line); }
+  .size-stock-row:last-child { border-bottom: none; }
+  .size-stock-row__label { font-family: var(--font-display); font-size: 1.1rem; width: 60px; }
+  .size-stock-row input { width: 90px; padding: 8px 10px; border: 2px solid var(--ink); font-family: inherit; font-size: 0.9rem; }
+  .size-stock-row__status { font-size: 0.8rem; opacity: 0.6; }
+
+  .color-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--grey-line); }
+  .color-row:last-child { border-bottom: none; }
+  .color-row__swatch { width: 32px; height: 32px; border: 2px solid var(--ink); flex-shrink: 0; }
+  .color-row input[type="text"] { flex: 1; padding: 8px 10px; border: 2px solid var(--ink); font-family: inherit; font-size: 0.9rem; }
+  .color-row input[type="color"] { width: 44px; height: 38px; border: 2px solid var(--ink); padding: 0; cursor: pointer; }
+  .remove-color-btn { background: none; border: none; color: var(--ink); font-size: 1.2rem; cursor: pointer; padding: 4px 8px; }
+
+  .add-color-row { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+  .add-color-row input[type="text"] { flex: 1; padding: 10px 12px; border: 2px solid var(--ink); font-family: inherit; }
+  .add-color-row input[type="color"] { width: 44px; height: 42px; border: 2px solid var(--ink); padding: 0; cursor: pointer; }
+
+  #save-status { font-size: 0.9rem; font-weight: 700; margin-top: 16px; display: block; }
+  #save-status.ok { color: #2a6b2a; }
+  #save-status.error { color: #a02020; }
+</style>
+</head>
+<body>
+
+<div id="lock-screen" class="lock-screen">
+  <h1 style="font-size:1.5rem;">Staff Login</h1>
+  <p>Enter the staff password to manage stock and colours.</p>
+  <input type="password" id="password-input" placeholder="Password" autocomplete="current-password">
+  <button class="btn-pay" id="unlock-btn" style="padding:14px;">Log In</button>
+  <p class="error" id="lock-error"></p>
+</div>
+
+<div id="admin-app" style="display:none;">
+  <div class="admin-bar">
+    <strong>Belfast Print — Staff</strong>
+    <div><a href="orders.html">Orders</a><a href="index.html">← Back to site</a></div>
+  </div>
+
+  <div class="admin-wrap">
+
+    <div class="admin-panel">
+      <h2>Sizes &amp; stock</h2>
+      <p>How many blank shirts you have in each size. Set to 0 for a size you're out of — it'll show crossed out and can't be selected on the site.</p>
+      <div id="size-stock-list"></div>
+    </div>
+
+    <div class="admin-panel">
+      <h2>Colours</h2>
+      <p>The shirt colours customers can choose from.</p>
+      <div id="color-list"></div>
+      <div class="add-color-row">
+        <input type="text" id="new-color-name" placeholder="Colour name, e.g. Navy">
+        <input type="color" id="new-color-hex" value="#1B2A4A">
+        <button type="button" class="btn-add-second" id="add-color-btn">+ Add</button>
+      </div>
+    </div>
+
+    <button type="button" class="btn-pay" id="save-btn">Save Changes</button>
+    <span id="save-status"></span>
+  </div>
+</div>
+
+<script>
+  const PASSWORD_SESSION_KEY = "belfastprint_admin_pw";
+  const SIZE_ORDER = ["S", "M", "L", "XL", "XXL"];
+  let sizes = [];
+  let colors = [];
+
+  function slugify(label) {
+    return label.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  }
+
+  async function loadSettings() {
+    const res = await fetch("/api/settings", { cache: "no-store" });
+    const data = await res.json();
+    sizes = (data.sizes || []).sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
+    colors = data.colors || [];
+  }
+
+  function renderSizes() {
+    const wrap = document.getElementById("size-stock-list");
+    wrap.innerHTML = sizes.map((s) => `
+      <div class="size-stock-row" data-size="${s.size}">
+        <span class="size-stock-row__label">${s.size}</span>
+        <input type="number" min="0" step="1" data-size-stock value="${s.stock}">
+        <span class="size-stock-row__status">${s.stock <= 0 ? "Sold out" : `${s.stock} in stock`}</span>
+      </div>
+    `).join("");
+
+    wrap.querySelectorAll("[data-size-stock]").forEach((input) => {
+      input.addEventListener("input", () => {
+        const row = input.closest("[data-size]");
+        const statusEl = row.querySelector(".size-stock-row__status");
+        const val = parseInt(input.value, 10) || 0;
+        statusEl.textContent = val <= 0 ? "Sold out" : `${val} in stock`;
+      });
+    });
+  }
+
+  function renderColors() {
+    const wrap = document.getElementById("color-list");
+    wrap.innerHTML = colors.map((c) => `
+      <div class="color-row" data-color-id="${c.id}">
+        <div class="color-row__swatch" style="background:${c.hex};"></div>
+        <input type="text" data-color-name value="${c.name}">
+        <input type="color" data-color-hex value="${c.hex}">
+        <button type="button" class="remove-color-btn" data-remove-color aria-label="Remove colour">×</button>
+      </div>
+    `).join("");
+
+    wrap.querySelectorAll("[data-color-hex]").forEach((input) => {
+      input.addEventListener("input", () => {
+        input.closest(".color-row").querySelector(".color-row__swatch").style.background = input.value;
+      });
+    });
+    wrap.querySelectorAll("[data-remove-color]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.closest("[data-color-id]").getAttribute("data-color-id");
+        colors = colors.filter((c) => c.id !== id);
+        renderColors();
+      });
+    });
+  }
+
+  document.getElementById("add-color-btn").addEventListener("click", () => {
+    const nameInput = document.getElementById("new-color-name");
+    const hexInput = document.getElementById("new-color-hex");
+    const name = nameInput.value.trim();
+    if (!name) return;
+    const id = slugify(name) || ("color" + Date.now());
+    if (colors.some((c) => c.id === id)) {
+      nameInput.value = "";
+      return;
+    }
+    colors.push({ id, name, hex: hexInput.value });
+    nameInput.value = "";
+    renderColors();
+  });
+
+  function collectSizesFromForm() {
+    return Array.from(document.querySelectorAll("[data-size]")).map((row) => ({
+      size: row.getAttribute("data-size"),
+      stock: Math.max(0, parseInt(row.querySelector("[data-size-stock]").value, 10) || 0),
+    }));
+  }
+
+  function collectColorsFromForm() {
+    return Array.from(document.querySelectorAll(".color-row")).map((row) => ({
+      id: row.getAttribute("data-color-id"),
+      name: row.querySelector("[data-color-name]").value.trim(),
+      hex: row.querySelector("[data-color-hex]").value,
+    }));
+  }
+
+  function setStatus(message, kind) {
+    const el = document.getElementById("save-status");
+    el.textContent = message;
+    el.className = kind || "";
+  }
+
+  document.getElementById("save-btn").addEventListener("click", async () => {
+    const password = sessionStorage.getItem(PASSWORD_SESSION_KEY);
+    const updatedSizes = collectSizesFromForm();
+    const updatedColors = collectColorsFromForm();
+
+    if (updatedColors.length === 0) {
+      setStatus("Add at least one colour before saving.", "error");
+      return;
+    }
+    if (updatedColors.some((c) => !c.name)) {
+      setStatus("Every colour needs a name.", "error");
+      return;
+    }
+
+    setStatus("Saving...", "");
+    try {
+      const res = await fetch("/api/settings/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Password": password || "" },
+        body: JSON.stringify({ sizes: updatedSizes, colors: updatedColors }),
+      });
+      const data = await res.json();
+      if (res.status === 401) {
+        setStatus("Wrong password — try unlocking again.", "error");
+        sessionStorage.removeItem(PASSWORD_SESSION_KEY);
+        showLockScreen();
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      sizes = updatedSizes;
+      colors = updatedColors;
+      setStatus("Saved — changes are live on the site.", "ok");
+    } catch (err) {
+      setStatus("Couldn't save: " + err.message, "error");
+    }
+  });
+
+  function showLockScreen() {
+    document.getElementById("lock-screen").style.display = "block";
+    document.getElementById("admin-app").style.display = "none";
+  }
+
+  async function unlockAndInit(password) {
+    sessionStorage.setItem(PASSWORD_SESSION_KEY, password);
+    document.getElementById("lock-screen").style.display = "none";
+    document.getElementById("admin-app").style.display = "block";
+    await loadSettings();
+    renderSizes();
+    renderColors();
+  }
+
+  document.getElementById("unlock-btn").addEventListener("click", () => {
+    const pw = document.getElementById("password-input").value;
+    if (!pw) return;
+    unlockAndInit(pw);
+  });
+  document.getElementById("password-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("unlock-btn").click();
+  });
+
+  const existingPassword = sessionStorage.getItem(PASSWORD_SESSION_KEY);
+  if (existingPassword) unlockAndInit(existingPassword);
+</script>
+</body>
+</html>

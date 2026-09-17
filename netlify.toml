@@ -1,0 +1,38 @@
+[build]
+  functions = "netlify/functions"
+  publish = "."
+
+[[redirects]]
+  from = "/api/save-design"
+  to = "/.netlify/functions/save-design"
+  status = 200
+
+[[redirects]]
+  from = "/api/settings"
+  to = "/.netlify/functions/settings-get"
+  status = 200
+
+[[redirects]]
+  from = "/api/settings/save"
+  to = "/.netlify/functions/settings-save"
+  status = 200
+
+[[redirects]]
+  from = "/api/create-checkout"
+  to = "/.netlify/functions/create-checkout"
+  status = 200
+
+[[redirects]]
+  from = "/api/square-webhook"
+  to = "/.netlify/functions/square-webhook"
+  status = 200
+
+[[redirects]]
+  from = "/api/orders"
+  to = "/.netlify/functions/orders-get"
+  status = 200
+
+[[redirects]]
+  from = "/api/orders/update"
+  to = "/.netlify/functions/orders-update"
+  status = 200
