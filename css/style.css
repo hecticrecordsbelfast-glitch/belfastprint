@@ -1,0 +1,275 @@
+/* ==========================================================
+   Belfast Print — stylesheet
+   Pure black & white, screen-print workshop aesthetic.
+   No colour accent anywhere — that's the point.
+   ========================================================== */
+
+:root {
+  --ink: #0A0A0A;
+  --paper: #FFFFFF;
+  --grey: #B0AFAC;
+  --grey-line: #DEDCD8;
+  --panel: #F5F4F2;
+
+  --font-display: "Archivo Black", "Arial Black", sans-serif;
+  --font-body: "Work Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --max: 1180px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  /* Halftone dot texture — the one piece of decoration, referencing
+     screen-print halftone separations rather than a generic pattern. */
+  background-image: radial-gradient(var(--grey-line) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+button { font-family: inherit; }
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 0.95;
+}
+
+.container { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Header ---------- */
+
+.site-header {
+  border-bottom: 4px solid var(--ink);
+  background: var(--paper);
+  padding: 20px 0;
+}
+.site-header__inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.site-header__wordmark {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  text-transform: uppercase;
+}
+.site-header__tag {
+  font-size: 0.85rem;
+  color: var(--ink);
+  opacity: 0.65;
+}
+
+/* ---------- Main layout ---------- */
+
+.builder {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 56px;
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .builder { grid-template-columns: 1fr; gap: 36px; padding-top: 32px; }
+}
+
+/* ---------- Shirt canvas ---------- */
+
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  aspect-ratio: 480 / 600;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  overflow: hidden;
+  touch-action: none;
+}
+.canvas-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.print-area {
+  position: absolute;
+  border: 2px dashed var(--grey);
+  pointer-events: none;
+}
+.print-area__label {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+
+.design-layer {
+  position: absolute;
+  cursor: grab;
+  border: 1px dashed transparent;
+}
+.design-layer:active { cursor: grabbing; }
+.design-layer.is-active { border-color: var(--ink); }
+.design-layer img { width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; }
+.design-layer__handle {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  width: 18px;
+  height: 18px;
+  background: var(--ink);
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  cursor: nwse-resize;
+}
+
+.drop-hint {
+  position: absolute;
+  inset: 24px;
+  border: 2px dashed var(--grey);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  font-size: 0.9rem;
+  color: var(--grey);
+  pointer-events: none;
+}
+.canvas-wrap.is-dragover .drop-hint { border-color: var(--ink); color: var(--ink); }
+
+/* ---------- Controls panel ---------- */
+
+.panel-block { margin-bottom: 32px; }
+.panel-block h2 { font-size: 1.1rem; margin-bottom: 12px; }
+.panel-block p { margin: 0 0 12px; font-size: 0.92rem; opacity: 0.8; }
+
+.swatch-row { display: flex; gap: 12px; }
+.swatch {
+  width: 48px; height: 48px;
+  border: 3px solid var(--ink);
+  cursor: pointer;
+  position: relative;
+}
+.swatch[data-color="white"] { background: var(--paper); }
+.swatch[data-color="black"] { background: var(--ink); }
+.swatch.is-selected::after {
+  content: "";
+  position: absolute; inset: -7px;
+  border: 2px solid var(--ink);
+}
+
+.size-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.size-btn {
+  min-width: 52px;
+  padding: 10px 4px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.size-btn.is-selected { background: var(--ink); color: var(--paper); }
+
+.upload-slot {
+  border: 2px dashed var(--ink);
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.upload-slot input[type="file"] { display: none; }
+.upload-slot__filled { font-size: 0.85rem; }
+.remove-layer-btn {
+  background: none; border: none; text-decoration: underline;
+  font-size: 0.8rem; cursor: pointer; padding: 0; margin-top: 6px;
+}
+
+.btn-add-second {
+  background: none;
+  border: 2px solid var(--ink);
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn-add-second:hover { background: var(--ink); color: var(--paper); }
+
+.fulfil-row { display: flex; flex-direction: column; gap: 10px; }
+.fulfil-option {
+  display: flex; align-items: center; gap: 10px;
+  border: 2px solid var(--ink); padding: 12px 14px;
+  cursor: pointer; font-size: 0.9rem;
+}
+.fulfil-option.is-selected { background: var(--panel); }
+
+.price-block {
+  border-top: 4px solid var(--ink);
+  padding-top: 20px;
+  margin-top: 32px;
+}
+.price-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+.price-row__label { font-size: 0.9rem; opacity: 0.75; }
+.price-row__value { font-family: var(--font-display); font-size: 2rem; }
+
+.btn-pay {
+  display: block;
+  width: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  padding: 18px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.btn-pay:hover { opacity: 0.85; }
+.btn-pay:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.form-error {
+  color: var(--ink);
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  display: none;
+}
+.form-error.is-visible { display: block; }
+
+.note-text { font-size: 0.78rem; opacity: 0.65; margin-top: 14px; }
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  border-top: 4px solid var(--ink);
+  padding: 32px 0;
+  text-align: center;
+  font-size: 0.85rem;
+}
+.site-footer a { text-decoration: underline; }
+
+/* ---------- Confirmation / staff pages shared bits ---------- */
+
+.page-content { max-width: 640px; margin: 0 auto; padding: 80px 24px; text-align: center; }
