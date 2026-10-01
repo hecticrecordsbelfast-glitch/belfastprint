@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bulk &amp; Wholesale Enquiries — Belfast Print</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="logo" href="index.html">BELFAST PRINT</a>
+    <nav class="header-links">
+      <a href="index.html">Build a shirt</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="form-page">
+    <h1>Bulk &amp; wholesale enquiries</h1>
+    <p class="lede">Ordering more than a handful of shirts — for a team, event, or your own brand? Tell us what you need and attach any reference images, and we'll get back to you with a quote.</p>
+
+    <form id="inquiryForm">
+      <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required />
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required />
+      </div>
+
+      <div class="field">
+        <label for="phone">Phone (optional)</label>
+        <input type="tel" id="phone" name="phone" />
+      </div>
+
+      <div class="field">
+        <label for="message">What do you need?</label>
+        <textarea id="message" name="message" placeholder="Quantity, sizes, colours, deadline, and any design details." required></textarea>
+      </div>
+
+      <div class="field">
+        <label>Reference images (optional)</label>
+        <div class="file-drop" id="fileDrop">
+          Drop images here, or click to choose files
+          <input type="file" id="fileInput" accept="image/*" multiple hidden />
+        </div>
+        <div class="file-list" id="fileList"></div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Send enquiry</button>
+      <div class="form-status" id="formStatus"></div>
+
+      <p class="disclaimer">We're happy to look at most ideas, but we reserve the right to decline any design or order that's copyrighted, offensive, or otherwise unsuitable for print — we'll let you know before any work begins.</p>
+    </form>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    Belfast Print · Collection from Drip, 49 Rosemary Street, Belfast
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  const MAX_IMAGES = 5;
+  const images = []; // { dataUrl, name }
+
+  const fileDrop = document.getElementById("fileDrop");
+  const fileInput = document.getElementById("fileInput");
+  const fileList = document.getElementById("fileList");
+  const form = document.getElementById("inquiryForm");
+  const submitBtn = document.getElementById("submitBtn");
+  const statusEl = document.getElementById("formStatus");
+
+  fileDrop.addEventListener("click", () => fileInput.click());
+
+  ["dragover", "dragenter"].forEach((evt) =>
+    fileDrop.addEventListener(evt, (e) => {
+      e.preventDefault();
+      fileDrop.classList.add("is-dragover");
+    })
+  );
+  ["dragleave", "drop"].forEach((evt) =>
+    fileDrop.addEventListener(evt, (e) => {
+      e.preventDefault();
+      fileDrop.classList.remove("is-dragover");
+    })
+  );
+  fileDrop.addEventListener("drop", (e) => {
+    handleFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener("change", (e) => {
+    handleFiles(e.target.files);
+    e.target.value = "";
+  });
+
+  function handleFiles(fileListInput) {
+    [...fileListInput].forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      if (images.length >= MAX_IMAGES) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        images.push({ dataUrl: reader.result, name: file.name });
+        renderFileList();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderFileList() {
+    fileList.innerHTML = "";
+    images.forEach((img, i) => {
+      const chip = document.createElement("div");
+      chip.className = "file-chip";
+      chip.innerHTML = `<img src="${img.dataUrl}" alt="${img.name}" /><button type="button">&times;</button>`;
+      chip.querySelector("button").addEventListener("click", () => {
+        images.splice(i, 1);
+        renderFileList();
+      });
+      fileList.appendChild(chip);
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    statusEl.textContent = "";
+    statusEl.className = "form-status";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Sending...";
+
+    const body = {
+      name: document.getElementById("name").value,
+      email: document.getElementById("email").value,
+      phone: document.getElementById("phone").value,
+      message: document.getElementById("message").value,
+      images: images.map((i) => i.dataUrl),
+    };
+
+    try {
+      const res = await fetch("/api/send-inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong");
+
+      statusEl.textContent = "Thanks — we've got your enquiry and will be in touch soon.";
+      statusEl.className = "form-status is-success";
+      form.reset();
+      images.length = 0;
+      renderFileList();
+      submitBtn.textContent = "Send enquiry";
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.className = "form-status is-error";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Send enquiry";
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

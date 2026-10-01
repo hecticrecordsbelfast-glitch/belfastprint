@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stock &amp; Settings — Belfast Print</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .staff-wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 96px; }
+  .login-box { max-width: 360px; margin: 120px auto; text-align: center; }
+  .login-box input { width: 100%; margin: 16px 0; }
+  .staff-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; }
+  .staff-header a { font-size: 14px; text-decoration: underline; }
+  table.stock-table { width: 100%; border-collapse: collapse; margin-bottom: 36px; }
+  table.stock-table th, table.stock-table td { border: 1px solid var(--line); padding: 10px; text-align: left; font-size: 14px; }
+  table.stock-table input[type="number"] { width: 70px; padding: 6px; border: 1px solid var(--ink); }
+  .color-row { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+  .color-row input[type="text"] { flex:1; padding:8px; border:1px solid var(--ink); }
+  .color-row input[type="color"] { width:44px; height:38px; border:1px solid var(--ink); padding:0; }
+  .remove-btn { background:none; border:1px solid var(--ink); cursor:pointer; padding:6px 10px; }
+  .add-btn { background:none; border:2px dashed var(--ink); cursor:pointer; padding:10px; width:100%; margin-top:8px; }
+  .sold-out-tag { color: var(--danger); font-weight: 700; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div id="loginView" class="login-box">
+  <h1>Staff login</h1>
+  <input type="password" id="passwordInput" placeholder="Admin password" />
+  <button class="submit-btn" id="loginBtn" style="width:100%;">Log in</button>
+  <p class="form-status is-error" id="loginError"></p>
+</div>
+
+<div id="appView" class="staff-wrap" hidden>
+  <div class="staff-header">
+    <h1 style="font-size:22px;">Stock &amp; settings</h1>
+    <a href="orders.html">Orders →</a>
+  </div>
+
+  <h2 style="font-size:16px;">Sizes &amp; stock</h2>
+  <table class="stock-table" id="sizeTable">
+    <thead><tr><th>Size</th><th>Stock</th><th>Status</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2 style="font-size:16px;">Colours</h2>
+  <div id="colorRows"></div>
+  <button class="add-btn" id="addColorBtn">+ Add colour</button>
+
+  <div style="margin-top:32px;">
+    <button class="submit-btn" id="saveBtn">Save changes</button>
+    <div class="form-status" id="saveStatus"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const VALID_SIZES = ["S", "M", "L", "XL", "XXL"];
+  let adminPassword = "";
+  let colors = [];
+
+  const loginView = document.getElementById("loginView");
+  const appView = document.getElementById("appView");
+
+  document.getElementById("loginBtn").addEventListener("click", attemptLogin);
+  document.getElementById("passwordInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") attemptLogin();
+  });
+
+  async function attemptLogin() {
+    const pw = document.getElementById("passwordInput").value;
+    adminPassword = pw;
+    sessionStorage.setItem("bp_admin_pw", pw);
+    await loadSettings();
+  }
+
+  async function loadSettings() {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      renderSizes(data.sizes || []);
+      colors = data.colors || [];
+      renderColors();
+      loginView.hidden = true;
+      appView.hidden = false;
+    } catch (e) {
+      document.getElementById("loginError").textContent = "Could not load settings.";
+    }
+  }
+
+  function renderSizes(sizes) {
+    const tbody = document.querySelector("#sizeTable tbody");
+    tbody.innerHTML = "";
+    const bySize = {};
+    sizes.forEach((s) => (bySize[s.size] = s.stock));
+    VALID_SIZES.forEach((size) => {
+      const stock = bySize[size] != null ? bySize[size] : 0;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${size}</td>
+        <td><input type="number" min="0" value="${stock}" data-size="${size}" /></td>
+        <td class="status-cell">${stock <= 0 ? '<span class="sold-out-tag">Sold out</span>' : "In stock"}</td>
+      `;
+      tbody.appendChild(tr);
+      const input = tr.querySelector("input");
+      input.addEventListener("input", () => {
+        tr.querySelector(".status-cell").innerHTML =
+          Number(input.value) <= 0 ? '<span class="sold-out-tag">Sold out</span>' : "In stock";
+      });
+    });
+  }
+
+  function renderColors() {
+    const wrap = document.getElementById("colorRows");
+    wrap.innerHTML = "";
+    colors.forEach((c, i) => {
+      const row = document.createElement("div");
+      row.className = "color-row";
+      row.innerHTML = `
+        <input type="color" value="${c.hex || "#000000"}" data-i="${i}" class="color-hex" />
+        <input type="text" value="${c.name || ""}" placeholder="Colour name" data-i="${i}" class="color-name" />
+        <button type="button" class="remove-btn" data-i="${i}">Remove</button>
+      `;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll(".color-hex").forEach((input) =>
+      input.addEventListener("input", (e) => (colors[e.target.dataset.i].hex = e.target.value))
+    );
+    wrap.querySelectorAll(".color-name").forEach((input) =>
+      input.addEventListener("input", (e) => (colors[e.target.dataset.i].name = e.target.value))
+    );
+    wrap.querySelectorAll(".remove-btn").forEach((btn) =>
+      btn.addEventListener("click", (e) => {
+        colors.splice(Number(e.target.dataset.i), 1);
+        renderColors();
+      })
+    );
+  }
+
+  document.getElementById("addColorBtn").addEventListener("click", () => {
+    colors.push({ name: "", hex: "#000000" });
+    renderColors();
+  });
+
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    const statusEl = document.getElementById("saveStatus");
+    statusEl.textContent = "Saving...";
+    statusEl.className = "form-status";
+
+    const sizes = [...document.querySelectorAll("#sizeTable input[type=number]")].map((input) => ({
+      size: input.dataset.size,
+      stock: Number(input.value),
+    }));
+
+    try {
+      const res = await fetch("/api/settings/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Password": adminPassword },
+        body: JSON.stringify({ sizes, colors }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not save");
+      statusEl.textContent = "Saved.";
+      statusEl.className = "form-status is-success";
+    } catch (e) {
+      statusEl.textContent = e.message;
+      statusEl.className = "form-status is-error";
+    }
+  });
+
+  // Try to resume a session
+  const stored = sessionStorage.getItem("bp_admin_pw");
+  if (stored) {
+    adminPassword = stored;
+    loadSettings();
+  }
+})();
+</script>
+
+</body>
+</html>
